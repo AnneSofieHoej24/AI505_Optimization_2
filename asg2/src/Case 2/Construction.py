@@ -120,9 +120,10 @@ class AddMove:
     def __str__(self):
         return f"assign student {self.s} to team {self.t}"
 
-    def diversity_gain(self, solution):
-        # Gain = sum of weights for attributes where student s introduces
-        # a label not yet present in team t (i.e. objective increase)
+    def lower_bound_increment(self, solution):
+        # Cost = sum of weights for attributes where student s introduces
+        # a new label into team t. Objective minimizes total label weight,
+        # so pick moves with the lowest increment.
         p = solution.problem
         return sum(
             p.weights[a]
@@ -144,14 +145,15 @@ def run_construction(instance_file, solution_file):
     p = Problem(instance_file)
     s = p.empty_solution()
 
-    # Greedy best-improvement construction
+    # Greedy best-improvement construction:
+    # at each step assign next student to whichever team adds least cost
     constr = p.construction_neighbourhood()
     while True:
-        best_move, best_gain = None, -math.inf
+        best_move, best_incr = None, math.inf
         for move in constr.moves(s):
-            gain = move.diversity_gain(s)
-            if gain > best_gain:
-                best_move, best_gain = move, gain
+            incr = move.lower_bound_increment(s)
+            if incr < best_incr:
+                best_move, best_incr = move, incr
         if best_move is None:
             break
         best_move.apply_move(s)

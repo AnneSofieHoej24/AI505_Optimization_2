@@ -137,10 +137,10 @@ class AddMove:
         return f"assign student {self.s} to team {self.t}"
 
     def lower_bound_increment(self, solution):
-        # ROAR minimizes this. Objective is to MAXIMIZE diversity weight,
-        # so negate: more new-label weight = more negative = preferred.
+        # Cost = weights of new labels introduced into the team.
+        # ROAR minimizes this, which matches the problem's minimize objective.
         p = solution.problem
-        return -sum(
+        return sum(
             p.weights[a]
             for a in range(p.n_attrs)
             if not any(
