@@ -8,6 +8,7 @@ import numpy as np
 from checker import check, read_instance, read_solution
 from Construction import run_construction as runCons
 from ConstructionR import run_randomized_construction as runRCons
+from Local_search import runLocalSearch as runLS
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -29,7 +30,7 @@ if __name__ == "__main__":
     n = args.vals[1]
     path = args.path
 
-    if con not in (0, 1):
+    if con not in (0, 1, 2):
         print("first integer must be 0 (greedy) or 1 (randomized)!")
         exit()
 
@@ -37,7 +38,7 @@ if __name__ == "__main__":
         random.seed(args.seed)
         np.random.seed(args.seed)
 
-    construction_map = {0: runCons, 1: runRCons}
+    construction_map = {0: runCons, 1: runRCons, 2: runLS}
     selected_function = construction_map[con]
 
     inst = read_instance(path)
@@ -49,8 +50,11 @@ if __name__ == "__main__":
         with contextlib.redirect_stdout(io.StringIO()):
             checked = check(inst, sol)
         assert checked == obj, f"checker={checked} disagrees with construction={obj}"
-        if i % 10 == 0:
-            print(f"{i} / {n}")
+        if n >= 10:
+            if i+1 % 10 == 0:
+                print(f"{i+1} / {n}")
+        else:
+            print(f"{i+1} / {n}")
         results.append(obj)
 
     arr = np.array(results)

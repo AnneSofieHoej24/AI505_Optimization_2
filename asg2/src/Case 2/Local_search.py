@@ -112,32 +112,18 @@ def best_improvement(solution):
 # ROAR-NET first improvement
 #s = roar_first(p, s)
 
+def runLocalSearch(instance_file, solution_file):
+    p = Problem(instance_file)
 
+    s = greedy_construction(p)
+    s = best_improvement(s)
+
+    with open(solution_file, 'w') as f:
+        f.write(' '.join(map(str, s.team)) + '\n')
+
+    return s.objective_value()
 
 if __name__ == '__main__':
     instance_file, solution_file = sys.argv[1], sys.argv[2]
+    runLocalSearch(instance_file, solution_file)
 
-    p = Problem(instance_file)
-
-    # Run 10 times: each starts from a different random greedy solution
-    best_solution = None
-    results = []
-    for i in range(10):
-        s = greedy_construction(p)           # random greedy initial solution
-        s = best_improvement(s)              # improve with local search
-        ov = s.objective_value()
-        if ov is None:
-            print(f"Run {i+1:2d}: infeasible, skipping")
-            continue
-        results.append(ov)
-        print(f"Run {i+1:2d}: {ov}")
-        if best_solution is None or ov < best_solution.objective_value():
-            best_solution = s
-
-    results.sort()
-    median = results[len(results) // 2]
-    print(f"\nBest:   {best_solution.objective_value()}")
-    print(f"Median: {median}")
-
-    with open(solution_file, 'w') as f:
-        f.write(' '.join(map(str, best_solution.team)) + '\n')
