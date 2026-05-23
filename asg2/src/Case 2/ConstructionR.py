@@ -5,8 +5,6 @@ import random
 from roar_net_api.algorithms import greedy_construction
 
 
-# ── Problem ───────────────────────────────────────────────────────────────────
-
 class Problem:
 
     def __init__(self, path):
@@ -51,8 +49,6 @@ class Problem:
         return AddNeighbourhood(self)
 
 
-# ── Solution ──────────────────────────────────────────────────────────────────
-
 class Solution:
 
     def __init__(self, problem, team, members):
@@ -80,8 +76,6 @@ class Solution:
     def lower_bound(self):
         return sum(self.problem.weights) * self.problem.n_teams
 
-
-# ── Neighbourhood ─────────────────────────────────────────────────────────────
 
 class AddNeighbourhood:
 
@@ -128,8 +122,6 @@ class AddNeighbourhood:
             yield AddMove(s, t)
 
 
-# ── Move ──────────────────────────────────────────────────────────────────────
-
 class AddMove:
 
     def __init__(self, s, t):
@@ -155,7 +147,6 @@ class AddMove:
         return solution
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
 
 if __name__ == '__main__':
     instance_file, solution_file = sys.argv[1], sys.argv[2]
