@@ -43,12 +43,14 @@ if __name__ == "__main__":
     inst = read_instance(path)
 
     results = []
-    for _ in range(n):
+    for i in range(n):
         obj = selected_function(path, "solution.txt")
         sol = read_solution("solution.txt", inst[1])
         with contextlib.redirect_stdout(io.StringIO()):
             checked = check(inst, sol)
         assert checked == obj, f"checker={checked} disagrees with construction={obj}"
+        if i % 10 == 0:
+            print(f"{i} / {n}")
         results.append(obj)
 
     arr = np.array(results)
