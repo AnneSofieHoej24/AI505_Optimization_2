@@ -2,7 +2,7 @@ import sys
 import math
 import random
 
-from Construction import Problem, Solution, greedy_construction
+from ConstructionR import Problem, Solution, greedy_construction
 
 from roar_net_api.algorithms import best_improvement as roar_best
 from roar_net_api.algorithms import first_improvement as roar_first
@@ -85,6 +85,7 @@ class SwapMove:
         solution.members[self.t_r].add(self.s)
 
 
+
 def best_improvement(solution):
     p = solution.problem
     local_nb = LocalNeighbourhood(p)
@@ -100,8 +101,16 @@ def best_improvement(solution):
         if best_move is None or best_incr >= 0:
             break
         best_move.apply_move(s)
-
     return s
+
+# Hand-written 
+#s = best_improvement(s)
+
+# ROAR-NET best improvement
+#s = roar_best(p, s)
+
+# ROAR-NET first improvement
+#s = roar_first(p, s)
 
 
 
