@@ -1,6 +1,6 @@
-import sys
 import math
 import random
+import sys
 
 from roar_net_api.algorithms import greedy_construction
 
@@ -13,13 +13,15 @@ class Problem:
         with open(path) as f:
             for line in f:
                 line = line.strip()
-                if line and not line.startswith('#'):
+                if line and not line.startswith("#"):
                     lines.append(line)
 
         tokens = iter(lines)
 
         # First line: problem dimensions
-        self.n, self.n_teams, self.n_attrs, n_disagree, self.team_min, self.team_max = map(int, next(tokens).split())
+        self.n, self.n_teams, self.n_attrs, n_disagree, self.team_min, self.team_max = (
+            map(int, next(tokens).split())
+        )
 
         # Second line: importance weight for each attribute
         self.weights = list(map(int, next(tokens).split()))
@@ -53,8 +55,8 @@ class Solution:
 
     def __init__(self, problem, team, members):
         self.problem = problem
-        self.team    = team      # team[s]    = team index of student s (-1 if unassigned)
-        self.members = members   # members[t] = set of students in team t
+        self.team = team  # team[s]    = team index of student s (-1 if unassigned)
+        self.members = members  # members[t] = set of students in team t
 
     def __str__(self):
         members = "\n".join([f"\t\t{t}: {str(m)}" for t, m in enumerate(self.members)])
@@ -97,8 +99,9 @@ class AddNeighbourhood:
 
         # Count remaining students and spots still needed to satisfy team_min
         n_remaining = len(unassigned)
-        spots_needed = sum(max(0, p.team_min - len(solution.members[t]))
-                           for t in range(p.n_teams))
+        spots_needed = sum(
+            max(0, p.team_min - len(solution.members[t])) for t in range(p.n_teams)
+        )
 
         # Shuffle team order for additional variation
         team_order = list(range(p.n_teams))
@@ -110,7 +113,9 @@ class AddNeighbourhood:
                 continue
 
             # Skip teams where s conflicts with an existing member
-            if any((min(s, o), max(s, o)) in p.disagreements for o in solution.members[t]):
+            if any(
+                (min(s, o), max(s, o)) in p.disagreements for o in solution.members[t]
+            ):
                 continue
 
             # Enforce team_min: don't add to a team that already has enough
@@ -132,12 +137,16 @@ class AddMove:
         return f"assign student {self.s} to team {self.t}"
 
     def lower_bound_increment(self, solution):
-        # Cost = weights of new labels introduced into the team
+        # ROAR minimizes this. Objective is to MAXIMIZE diversity weight,
+        # so negate: more new-label weight = more negative = preferred.
         p = solution.problem
-        return sum(p.weights[a]
-                   for a in range(p.n_attrs)
-                   if not any(p.labels[o][a] == p.labels[self.s][a]
-                              for o in solution.members[self.t]))
+        return -sum(
+            p.weights[a]
+            for a in range(p.n_attrs)
+            if not any(
+                p.labels[o][a] == p.labels[self.s][a] for o in solution.members[self.t]
+            )
+        )
 
     def apply_move(self, solution):
         # Assign student to team, mutate in place, and return solution
@@ -147,27 +156,20 @@ class AddMove:
         return solution
 
 
-
-if __name__ == '__main__':
-    instance_file, solution_file = sys.argv[1], sys.argv[2]
-
+def run_randomized_construction(instance_file, solution_file):
+    # Single randomized run. Outer driver (SolutionChecker) handles repetition + stats.
     p = Problem(instance_file)
+    s = greedy_construction(p)
+    ov = s.objective_value()
 
-    # Run the randomised greedy construction 10 times and keep the best solution
-    best_solution = None
-    results = []
-    for i in range(10):
-        s = greedy_construction(p)
-        ov = s.objective_value()
-        results.append(ov)
-        print(f"Run {i+1:2d}: {ov}")
-        if best_solution is None or ov < best_solution.objective_value():
-            best_solution = s
+    with open(solution_file, "w") as f:
+        f.write(" ".join(map(str, s.team)) + "\n")
 
-    results.sort()
-    median = results[len(results) // 2]
-    print(f"\nBest:   {best_solution.objective_value()}")
-    print(f"Median: {median}")
+    return ov
 
-    with open(solution_file, 'w') as f:
-        f.write(' '.join(map(str, best_solution.team)) + '\n')
+
+if __name__ == "__main__":
+    instance_file = sys.argv[1]
+    solution_file = sys.argv[2]
+    obj = run_randomized_construction(instance_file, solution_file)
+    print(f"Objective value: {obj}")

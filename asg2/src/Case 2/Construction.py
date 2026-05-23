@@ -1,8 +1,10 @@
-import random
-from collections.abc import Iterable
-import sys
 import math
+import random
+import sys
+from collections.abc import Iterable
+
 from roar_net_api.algorithms import greedy_construction
+
 
 class Problem:
 
@@ -12,13 +14,15 @@ class Problem:
         with open(path) as f:
             for line in f:
                 line = line.strip()
-                if line and not line.startswith('#'):
+                if line and not line.startswith("#"):
                     lines.append(line)
 
         tokens = iter(lines)
 
         # First line: problem dimensions
-        self.n, self.n_teams, self.n_attrs, n_disagree, self.team_min, self.team_max = map(int, next(tokens).split())
+        self.n, self.n_teams, self.n_attrs, n_disagree, self.team_min, self.team_max = (
+            map(int, next(tokens).split())
+        )
 
         # Second line: importance weight for each attribute
         self.weights = list(map(int, next(tokens).split()))
@@ -50,13 +54,12 @@ class Problem:
         return AddNeighbourhood(self)
 
 
-
 class Solution:
 
     def __init__(self, problem, team, members):
         self.problem = problem
-        self.team    = team      # team[s]    = team index of student s (-1 if unassigned)
-        self.members = members   # members[t] = set of students in team t
+        self.team = team  # team[s]    = team index of student s (-1 if unassigned)
+        self.members = members  # members[t] = set of students in team t
 
     def __str__(self):
         members = "\n".join([f"\t\t{t}: {str(m)}" for t, m in enumerate(self.members)])
@@ -82,7 +85,6 @@ class Solution:
         return sum(self.problem.weights) * self.problem.n_teams
 
 
-
 class AddNeighbourhood:
 
     def __init__(self, problem):
@@ -102,7 +104,9 @@ class AddNeighbourhood:
             if len(solution.members[t]) >= p.team_max:
                 continue
             # Skip teams where s has a disagreement with an existing member
-            if any((min(s, o), max(s, o)) in p.disagreements for o in solution.members[t]):
+            if any(
+                (min(s, o), max(s, o)) in p.disagreements for o in solution.members[t]
+            ):
                 continue
             yield AddMove(s, t)
 
@@ -116,60 +120,65 @@ class AddMove:
     def __str__(self):
         return f"assign student {self.s} to team {self.t}"
 
-    def lower_bound_increment(self, solution):
-        # Cost of this move = sum of weights for attributes where
-        # student s introduces a label not yet present in team t
+    def diversity_gain(self, solution):
+        # Gain = sum of weights for attributes where student s introduces
+        # a label not yet present in team t (i.e. objective increase)
         p = solution.problem
-        return sum(p.weights[a]
-                   for a in range(p.n_attrs)
-                   if not any(p.labels[o][a] == p.labels[self.s][a]
-                              for o in solution.members[self.t]))
+        return sum(
+            p.weights[a]
+            for a in range(p.n_attrs)
+            if not any(
+                p.labels[o][a] == p.labels[self.s][a] for o in solution.members[self.t]
+            )
+        )
 
     def apply_move(self, solution):
         # Mutates the solution in place
         solution.team[self.s] = self.t
         solution.members[self.t].add(self.s)
-        #return solution
-
+        # return solution
 
 
 # Greedy self
-
-if __name__ == '__main__':
-    instance_file, solution_file = sys.argv[1], sys.argv[2]
-
+def run_construction(instance_file, solution_file):
     p = Problem(instance_file)
     s = p.empty_solution()
 
-    #Greedy best-improvement construction:
-    #at each step assign the next student to whichever team costs least
+    # Greedy best-improvement construction
     constr = p.construction_neighbourhood()
     while True:
-        best_move, best_incr = None, math.inf
+        best_move, best_gain = None, -math.inf
         for move in constr.moves(s):
-            incr = move.lower_bound_increment(s)
-            if incr < best_incr:
-                best_move, best_incr = move, incr
+            gain = move.diversity_gain(s)
+            if gain > best_gain:
+                best_move, best_gain = move, gain
         if best_move is None:
             break
         best_move.apply_move(s)
 
     print(f"Objective value: {s.objective_value()}")
 
-    with open(solution_file, 'w') as f:
-        f.write(' '.join(map(str, s.team)) + '\n')
+    with open(solution_file, "w") as f:
+        f.write(" ".join(map(str, s.team)) + "\n")
+
+    return s.objective_value()
+
+
+if __name__ == "__main__":
+    result = run_construction(sys.argv[1], sys.argv[2])
+
 
 # ROAR API
 
 # if __name__ == '__main__':
 #     instance_file, solution_file = sys.argv[1], sys.argv[2]
- 
+
 #     p = Problem(instance_file)
- 
+
 #     # Use the ROAR-NET greedy construction algorithm
 #     s = greedy_construction(p)
- 
+
 #     print(f"Objective value: {s.objective_value()}")
- 
+
 #     with open(solution_file, 'w') as f:
 #         f.write(' '.join(map(str, s.team)) + '\n')
