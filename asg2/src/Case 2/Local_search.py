@@ -8,8 +8,6 @@ from roar_net_api.algorithms import best_improvement as roar_best
 from roar_net_api.algorithms import first_improvement as roar_first
 
 
-# ── Local Neighbourhood ───────────────────────────────────────────────────────
-
 class LocalNeighbourhood:
 
     def __init__(self, problem):
@@ -44,9 +42,6 @@ def can_join(s, t, excluding, solution):
         if (min(s, other), max(s, other)) in solution.problem.disagreements:
             return False
     return True
-
-
-# ── Local Move ────────────────────────────────────────────────────────────────
 
 class SwapMove:
 
@@ -90,8 +85,6 @@ class SwapMove:
         solution.members[self.t_r].add(self.s)
 
 
-# ── Best Improvement ──────────────────────────────────────────────────────────
-
 def best_improvement(solution):
     p = solution.problem
     local_nb = LocalNeighbourhood(p)
@@ -111,7 +104,6 @@ def best_improvement(solution):
     return s
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
 
 if __name__ == '__main__':
     instance_file, solution_file = sys.argv[1], sys.argv[2]

@@ -82,7 +82,6 @@ class Solution:
         return sum(self.problem.weights) * self.problem.n_teams
 
 
-# ── Neighbourhood ─────────────────────────────────────────────────────────────
 
 class AddNeighbourhood:
 
@@ -133,7 +132,6 @@ class AddMove:
         #return solution
 
 
-# ── Main ──────────────────────────────────────────────────────────────────────
 
 # Greedy self
 
