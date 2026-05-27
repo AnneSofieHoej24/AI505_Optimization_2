@@ -37,4 +37,5 @@ env/
 
 # Project artifacts
 solution.txt
+solution_*.txt
 *.log
