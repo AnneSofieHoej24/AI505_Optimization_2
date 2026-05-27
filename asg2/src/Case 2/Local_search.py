@@ -76,13 +76,13 @@ class SwapMove:
         return self.ov_incr
 
     def apply_move(self, solution):
-        # Swap the two students between teams, mutating the solution in place
         solution.team[self.s] = self.t_r
         solution.team[self.r] = self.t_s
         solution.members[self.t_s].discard(self.s)
         solution.members[self.t_s].add(self.r)
         solution.members[self.t_r].discard(self.r)
         solution.members[self.t_r].add(self.s)
+        return solution
 
 
 
