@@ -134,13 +134,41 @@ class AddMove:
         )
 
     def apply_move(self, solution):
-        # Mutates the solution in place
         solution.team[self.s] = self.t
         solution.members[self.t].add(self.s)
-        # return solution
+        return solution
 
 
 # Greedy self
+def repair_min_size(s):
+    """Move students from over-min teams to under-min teams until all teams >= team_min."""
+    p = s.problem
+    changed = True
+    while changed:
+        changed = False
+        under = [t for t in range(p.n_teams) if len(s.members[t]) < p.team_min]
+        if not under:
+            return
+        for u in under:
+            moved = False
+            for o in range(p.n_teams):
+                if len(s.members[o]) <= p.team_min:
+                    continue
+                for stu in list(s.members[o]):
+                    if any((min(stu, m), max(stu, m)) in p.disagreements for m in s.members[u]):
+                        continue
+                    s.members[o].discard(stu)
+                    s.members[u].add(stu)
+                    s.team[stu] = u
+                    changed = True
+                    moved = True
+                    break
+                if moved:
+                    break
+            if not moved:
+                return
+
+
 def run_construction(instance_file, solution_file):
     p = Problem(instance_file)
     s = p.empty_solution()
@@ -157,6 +185,8 @@ def run_construction(instance_file, solution_file):
         if best_move is None:
             break
         best_move.apply_move(s)
+
+    repair_min_size(s)
 
     print(f"Objective value: {s.objective_value()}")
 
