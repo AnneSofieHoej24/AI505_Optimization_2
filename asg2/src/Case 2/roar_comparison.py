@@ -33,6 +33,7 @@ class _SearchNeighbourhood(LocalNeighbourhood):
     """LocalNeighbourhood plus the random-order iteration the SA reference needs."""
 
     def random_moves_without_replacement(self, solution):
+        """Yield all feasible swaps once each, in random order."""
         moves = list(self.moves(solution))
         random.shuffle(moves)
         yield from moves
@@ -42,14 +43,17 @@ class _SearchProblem:
     """Adapter exposing local_neighbourhood() so roar's LS/SA can drive our model."""
 
     def __init__(self, problem):
+        """Wrap the underlying problem instance."""
         self.problem = problem
 
     def local_neighbourhood(self):
+        """Return the swap neighbourhood the reference search algorithms expect."""
         return _SearchNeighbourhood(self.problem)
 
 
 def _calibrate_init_temp(problem, solution):
-    # Same calibration our own SA uses: ~97% acceptance of opening moves.
+    """Return a start temperature giving ~97% acceptance of opening moves, the
+    same calibration our own SA uses."""
     sample = []
     for _ in range(200):
         m = random_swap_move(problem, solution)
@@ -60,7 +64,8 @@ def _calibrate_init_temp(problem, solution):
 
 
 def compare_greedy(path):
-    # Deterministic construction; one run each is enough.
+    """Run our greedy construction and roar's greedy_construction (both deterministic)
+    and return their objective values as (own, roar)."""
     with contextlib.redirect_stdout(io.StringIO()):
         own = run_construction(path, "/dev/null")
 
@@ -72,8 +77,8 @@ def compare_greedy(path):
 
 
 def compare_randomized(path, runs):
-    # ConstructionR is roar's greedy_construction driven by our randomized
-    # neighbourhood; check whether that beats roar's plain greedy.
+    """Run our randomized construction (roar's greedy_construction driven by our
+    neighbourhood) several times; return (best, median, completed_runs)."""
     objs = []
     for _ in range(runs):
         s = greedy_construction(RandomProblem(path))
@@ -86,7 +91,8 @@ def compare_randomized(path, runs):
 
 
 def compare_local_search(path):
-    # Identical greedy start for both, so any difference is the search itself.
+    """Run our best-improvement and roar's best_improvement from an identical
+    greedy start, so any difference is the search itself; return (own, roar)."""
     p = RandomProblem(path)
     start = greedy_construction(p)
     own = own_best_improvement(start.copy_solution()).objective_value()
@@ -95,6 +101,8 @@ def compare_local_search(path):
 
 
 def compare_sa(path, budget):
+    """Run our SA and roar's reference SA from an identical greedy start with the
+    same calibrated start temperature and time budget; return (own, roar)."""
     p = GreedyProblem(path)
     start = greedy_construction(p)
     repair_min_size(start)
@@ -107,6 +115,7 @@ def compare_sa(path, budget):
 
 
 def _summary(label, pairs):
+    """Print best and median of own vs roar over a list of (own, roar) pairs."""
     own_best = min(o for o, _ in pairs)
     roar_best = min(r for _, r in pairs)
     own_med = sorted(o for o, _ in pairs)[len(pairs) // 2]
