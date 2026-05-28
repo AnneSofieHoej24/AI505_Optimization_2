@@ -19,20 +19,20 @@ import matplotlib.pyplot as plt
 from line_search import strong_backtracking
 
 
-# ---------- barrier, gradient, Hessian -------------------------------------
 def make_oracle(A):
-    """Returns three functions: the barrier f, its gradient and its Hessian."""
+    """Build the barrier f, its gradient and its Hessian for the box-constrained
+    centering problem with inequality matrix A."""
 
     def slacks(x):
-        # Slacks for the three groups of constraints.
+        """Return the slacks for the inequality, upper-box and lower-box terms."""
         s_ineq = 1.0 - A @ x
         s_up = 1.0 - x
         s_lo = 1.0 + x
         return s_ineq, s_up, s_lo
 
     def f(x):
+        """Barrier value at x, or +inf if x is not strictly feasible."""
         s, su, sl = slacks(x)
-        # If x is not strictly feasible, return infinity.
         if np.any(s <= 0):
             return np.inf
         if np.any(su <= 0):
@@ -50,6 +50,7 @@ def make_oracle(A):
         return total
 
     def grad(x):
+        """Gradient of the barrier at x."""
         s, su, sl = slacks(x)
         part1 = A.T @ (1.0 / s)
         part2 = 1.0 / su
@@ -57,14 +58,13 @@ def make_oracle(A):
         return part1 + part2 - part3
 
     def hess(x):
+        """Hessian of the barrier at x (inequality term plus box diagonal)."""
         s, su, sl = slacks(x)
 
-        # Hessian from the inequality constraints: A^T diag(1/s^2) A.
         scaling = 1.0 / (s ** 2)
         scaled_A = A.T * scaling
         H = scaled_A @ A
 
-        # Add the diagonal contribution from the box constraints.
         diag_extra = 1.0 / (su ** 2) + 1.0 / (sl ** 2)
         H = H + np.diag(diag_extra)
         return H
@@ -72,8 +72,9 @@ def make_oracle(A):
     return f, grad, hess
 
 
-# ---------- gradient descent -----------------------------------------------
 def gradient_descent(A, x0, eta=1e-6, max_iter=2000):
+    """Minimize the barrier by gradient descent with Wolfe line search; returns
+    the final x and the histories of objective, step length and gradient norm."""
     f, grad, _ = make_oracle(A)
     x = x0.copy()
 
@@ -97,8 +98,9 @@ def gradient_descent(A, x0, eta=1e-6, max_iter=2000):
     return x, np.array(fs), np.array(steps), np.array(gnorms)
 
 
-# ---------- Newton ----------------------------------------------------------
 def newton(A, x0, eta=1e-8, max_iter=200):
+    """Minimize the barrier by damped Newton with Wolfe line search, stopping on
+    the Newton-decrement rule; returns final x and objective/step/decrement histories."""
     f, grad, hess = make_oracle(A)
     x = x0.copy()
 
@@ -111,7 +113,6 @@ def newton(A, x0, eta=1e-8, max_iter=200):
         H = hess(x)
         d = -np.linalg.solve(H, g)
 
-        # Newton decrement squared.
         lam2 = -g @ d
         if lam2 < 0.0:
             lam_value = 0.0
@@ -131,11 +132,11 @@ def newton(A, x0, eta=1e-8, max_iter=200):
     return x, np.array(fs), np.array(steps), np.array(decr)
 
 
-# ---------- experiment ------------------------------------------------------
 def run_instance(n, m, seed=0):
+    """Sample a random instance, run gradient descent and Newton from the origin,
+    print a summary line for each, and return their (objective, step, measure) histories."""
     rng = np.random.default_rng(seed)
 
-    # Sample a_i ~ N(0, I). The origin is strictly feasible since a_i^T 0 = 0 < 1.
     A = rng.standard_normal((m, n))
     x0 = np.zeros(n)
 
@@ -172,10 +173,11 @@ NT_COLOR = "#D7263D"
 
 
 def plot_run(gd, nt, n, m, fname):
+    """Plot suboptimality, optimality measure and step length for one instance
+    and save the figure to fname."""
     fg, sg, gng = gd
     fn, sn, dn = nt
 
-    # Use the smallest value we found as our reference for the optimal value.
     f_star = min(fg[-1], fn[-1])
     gap_g = np.maximum(fg - f_star, 1e-16)
     gap_n = np.maximum(fn - f_star, 1e-16)
@@ -215,6 +217,8 @@ def plot_run(gd, nt, n, m, fname):
 
 
 def plot_summary(results, fname):
+    """Overlay the suboptimality and optimality curves of all instances on a
+    single figure and save it to fname."""
     fig, axes = plt.subplots(1, 2, figsize=(11, 4.2))
 
     num_runs = len(results)
@@ -254,6 +258,7 @@ def plot_summary(results, fname):
 
 
 def run():
+    """Run all four instances, save per-instance plots and the summary plot."""
     instances = [(2, 5), (10, 30), (50, 200), (100, 500)]
     results = {}
     for instance in instances:

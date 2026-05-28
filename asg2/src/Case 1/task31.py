@@ -11,7 +11,8 @@ from common import A, b, solve_center, draw_feasible_region, style_axes
 
 
 def run():
-    # ---- plot the feasible region ----------------------------------------
+    """Run Newton from the origin to the analytic center, plot the feasible
+    region and the Newton path, and return the center x*."""
     fig, ax = plt.subplots(figsize=(6, 6))
     draw_feasible_region(ax, alpha_fill=0.75)
 
@@ -21,18 +22,17 @@ def run():
         path_effects=[pe.withStroke(linewidth=2, foreground="white")],
     )
 
-    # ---- run Newton from the origin --------------------------------------
     point = (0, 0)
     start_array = np.array(point, dtype=float)
 
     from common import barrier
     print("f(start) =", barrier(start_array, A, b))
 
-    # Track each Newton iterate so we can plot the path.
     path_list = []
     path_list.append(np.array(point, dtype=float))
 
     def store_iterate(xk):
+        """Callback that records each Newton iterate for plotting."""
         path_list.append(xk.copy())
 
     res = solve_center(A, b, x0=point, callback=store_iterate)
@@ -46,7 +46,6 @@ def run():
     print("f(x*) =", res.fun, "iters =", res.nit)
     print("min slack =", min_slack)
 
-    # ---- first figure: feasible region + starting point ------------------
     style_axes(ax)
     plt.tight_layout()
     ax.scatter(point[0], point[1], color="k", zorder=5,
@@ -54,7 +53,6 @@ def run():
     ax.legend(loc="upper left")
     plt.savefig("figures/simpelPlot.png", dpi=200, bbox_inches="tight")
 
-    # ---- second figure: add the Newton path and the center ---------------
     path_x = path[:, 0]
     path_y = path[:, 1]
     ax.plot(

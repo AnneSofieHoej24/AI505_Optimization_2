@@ -6,7 +6,6 @@ import numpy as np
 from scipy.optimize import minimize
 
 
-# Constraint matrix A and right-hand side b for the polytope A x <= b.
 A = np.array([
     [1, 0],
     [0, 1],
@@ -17,7 +16,6 @@ A = np.array([
 b = np.array([1, 1, 1, 1, 1.5], dtype=float)
 
 
-# Grid used for plotting the feasible region.
 x_values = np.linspace(-1.4, 1.4, 400)
 y_values = np.linspace(-1.4, 1.4, 400)
 xx, yy = np.meshgrid(x_values, y_values)
@@ -35,12 +33,11 @@ def compute_feasible_mask(A_input, b_input, grid_xx, grid_yy):
     return feasible_flat.reshape(grid_xx.shape)
 
 
-# Precompute the feasible mask for the default A, b.
 feasible = compute_feasible_mask(A, b, xx, yy)
 
 
 def barrier(x, A_input, b_input):
-    """Log-barrier f(x) = -sum_i log(b_i - a_i^T x)."""
+    """Log-barrier f(x) = -sum_i log(b_i - a_i^T x); +inf outside the polytope."""
     s = b_input - A_input @ x
     if np.any(s <= 0):
         return np.inf
@@ -51,12 +48,14 @@ def barrier(x, A_input, b_input):
 
 
 def barrier_grad(x, A_input, b_input):
+    """Gradient of the log-barrier: A^T (1 / s) with s = b - A x."""
     s = b_input - A_input @ x
     inv_s = 1.0 / s
     return A_input.T @ inv_s
 
 
 def barrier_hess(x, A_input, b_input):
+    """Hessian of the log-barrier: A^T diag(1 / s^2) A with s = b - A x."""
     s = b_input - A_input @ x
     diag_values = 1.0 / (s ** 2)
     D = np.diag(diag_values)
@@ -67,12 +66,15 @@ def solve_center(A_input, b_input, x0=(0.0, 0.0), callback=None):
     """Find the analytic center of {x : A x <= b} using Newton's method."""
 
     def f_local(x):
+        """Barrier value at x for the captured A, b."""
         return barrier(x, A_input, b_input)
 
     def g_local(x):
+        """Barrier gradient at x for the captured A, b."""
         return barrier_grad(x, A_input, b_input)
 
     def h_local(x):
+        """Barrier Hessian at x for the captured A, b."""
         return barrier_hess(x, A_input, b_input)
 
     result = minimize(

@@ -14,6 +14,8 @@ from common import A, b, solve_center, draw_feasible_region, style_axes
 
 
 def run(x_star):
+    """Re-solve the center after scaling the 5th constraint by several gammas
+    and plot that every scaled center coincides with the original x_star."""
     fig2, ax2 = plt.subplots(figsize=(6, 6))
     draw_feasible_region(ax2, alpha_fill=0.5)
 
@@ -32,7 +34,6 @@ def run(x_star):
         g = gammas[i]
         c = colors[i]
 
-        # Scale only the 5th constraint (index 4) by gamma.
         A_g = A.copy()
         b_g = b.copy()
         A_g[4] = A_g[4] * g

@@ -57,7 +57,6 @@ if __name__ == "__main__":
         results.append(obj)
 
     arr = np.array(results)
-    # Objective is MINIMIZED — best = min.
     print(
         f"best={arr.min()} median={np.median(arr)} mean={arr.mean():.1f} "
         f"worst={arr.max()} std={arr.std():.1f}"

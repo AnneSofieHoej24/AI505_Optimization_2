@@ -1,30 +1,28 @@
 import sys
 import math
-import random
 
-from ConstructionR import Problem, Solution, greedy_construction
-
-from roar_net_api.algorithms import best_improvement as roar_best
-from roar_net_api.algorithms import first_improvement as roar_first
+from ConstructionR import Problem
+from roar_net_api.algorithms import greedy_construction
 
 
 class LocalNeighbourhood:
+    """Local-search neighbourhood whose moves swap two students between teams,
+    preserving team sizes so the size constraints stay satisfied."""
 
     def __init__(self, problem):
+        """Store the problem this neighbourhood operates on."""
         self.problem = problem
 
     def moves(self, solution):
+        """Yield every feasible size-preserving swap between students on different teams."""
         p = self.problem
-        # A move swaps student s (in team t_s) with student r (in team t_r).
-        # Swapping keeps team sizes balanced so team_min/team_max stay satisfied.
         for s in range(p.n):
             t_s = solution.team[s]
             for r in range(s + 1, p.n):
                 t_r = solution.team[r]
                 if t_s == t_r:
-                    continue  # same team, no point swapping
+                    continue
 
-                # s joins t_r (r is leaving), r joins t_s (s is leaving)
                 if not can_join(s, t_r, r, solution):
                     continue
                 if not can_join(r, t_s, s, solution):
@@ -34,8 +32,8 @@ class LocalNeighbourhood:
 
 
 def can_join(s, t, excluding, solution):
-    # Check student s has no disagreement with anyone in team t,
-    # ignoring 'excluding' who is simultaneously leaving the team
+    """Return True if student s can join team t without a disagreement, ignoring
+    the member 'excluding' who is leaving t in the same swap."""
     for other in solution.members[t]:
         if other == excluding:
             continue
@@ -43,24 +41,27 @@ def can_join(s, t, excluding, solution):
             return False
     return True
 
+
 class SwapMove:
+    """A move that swaps student s (team t_s) with student r (team t_r)."""
 
     def __init__(self, s, t_s, r, t_r):
-        self.s,   self.t_s = s,  t_s   # student s and their current team
-        self.r,   self.t_r = r,  t_r   # student r and their current team
+        """Record the two students and their current teams; cache starts empty."""
+        self.s,   self.t_s = s,  t_s
+        self.r,   self.t_r = r,  t_r
         self.ov_incr = None
 
     def __str__(self):
+        """Describe the swap."""
         return f"swap student {self.s} (team {self.t_s}) with student {self.r} (team {self.t_r})"
 
     def objective_value_increment(self, solution):
-        # Only compute once and cache the result
+        """Change in objective from applying the swap (cached after first call)."""
         if self.ov_incr is None:
             p = solution.problem
             ms = solution.members[self.t_s]
             mr = solution.members[self.t_r]
 
-            # Simulate the swap to compute new label diversity
             new_ms = (ms - {self.s}) | {self.r}
             new_mr = (mr - {self.r}) | {self.s}
 
@@ -76,6 +77,7 @@ class SwapMove:
         return self.ov_incr
 
     def apply_move(self, solution):
+        """Apply the swap in place and return the mutated solution."""
         solution.team[self.s] = self.t_r
         solution.team[self.r] = self.t_s
         solution.members[self.t_s].discard(self.s)
@@ -85,8 +87,9 @@ class SwapMove:
         return solution
 
 
-
 def best_improvement(solution):
+    """Repeatedly apply the swap with the most negative objective increment until
+    no improving swap remains, then return the resulting local optimum."""
     p = solution.problem
     local_nb = LocalNeighbourhood(p)
     s = solution.copy_solution()
@@ -97,22 +100,15 @@ def best_improvement(solution):
             incr = move.objective_value_increment(s)
             if incr < best_incr:
                 best_move, best_incr = move, incr
-        # Stop when no improving move exists
         if best_move is None or best_incr >= 0:
             break
         best_move.apply_move(s)
     return s
 
-# Hand-written 
-#s = best_improvement(s)
-
-# ROAR-NET best improvement
-#s = roar_best(p, s)
-
-# ROAR-NET first improvement
-#s = roar_first(p, s)
 
 def runLocalSearch(instance_file, solution_file):
+    """Construct a start solution, run best-improvement local search, write the
+    result and return its objective."""
     p = Problem(instance_file)
 
     s = greedy_construction(p)
@@ -123,7 +119,7 @@ def runLocalSearch(instance_file, solution_file):
 
     return s.objective_value()
 
+
 if __name__ == '__main__':
     instance_file, solution_file = sys.argv[1], sys.argv[2]
     runLocalSearch(instance_file, solution_file)
-

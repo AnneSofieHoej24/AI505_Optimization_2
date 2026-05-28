@@ -16,6 +16,7 @@ import task4
 
 
 def main():
+    """Run Tasks 3.1, 3.2, 3.3 and 4 in order and show the figures."""
     print("=" * 60)
     print("Task 3.1")
     print("=" * 60)

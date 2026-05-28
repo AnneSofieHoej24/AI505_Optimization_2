@@ -10,7 +10,8 @@ from common import A, b, solve_center, draw_feasible_region, style_axes
 
 
 def run(x_star):
-    # Normalize: each row of A and b is divided by b_i.
+    """Normalize every constraint to a_i^T x <= 1 (dividing row i by b_i),
+    re-solve, and plot that the center matches the original x_star."""
     A_norm = A / b[:, None]
     b_norm = np.ones_like(b)
 

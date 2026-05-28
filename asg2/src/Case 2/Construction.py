@@ -1,15 +1,13 @@
 import math
-import random
 import sys
-from collections.abc import Iterable
-
-from roar_net_api.algorithms import greedy_construction
 
 
 class Problem:
+    """A team-formation instance: students, attributes, weights, team-size
+    bounds and the set of disagreeing student pairs."""
 
     def __init__(self, path):
-        # Read the instance file, skipping blank lines and comments (#)
+        """Parse an instance file into dimensions, weights, labels and disagreements."""
         lines = []
         with open(path) as f:
             for line in f:
@@ -19,27 +17,19 @@ class Problem:
 
         tokens = iter(lines)
 
-        # First line: problem dimensions
         self.n, self.n_teams, self.n_attrs, n_disagree, self.team_min, self.team_max = (
             map(int, next(tokens).split())
         )
 
-        # Second line: importance weight for each attribute
         self.weights = list(map(int, next(tokens).split()))
 
-        # Next n lines: attribute labels for each student
-        # labels[s][a] = label of student s for attribute a
         self.labels = [list(map(int, next(tokens).split())) for _ in range(self.n)]
 
-        # Remaining lines: pairs of students who cannot share a team
-        # Stored as (min, max) tuples so we can look them up consistently
         self.disagreements = set()
         for _ in range(n_disagree):
             a, b = map(int, next(tokens).split())
             self.disagreements.add((min(a, b), max(a, b)))
 
-        # Pre-sort students by number of disagreements, most constrained first.
-        # This helps the greedy avoid dead ends where a student has no valid team.
         conflict_count = [0] * self.n
         for a, b in self.disagreements:
             conflict_count[a] += 1
@@ -47,63 +37,66 @@ class Problem:
         self.order = sorted(range(self.n), key=lambda s: -conflict_count[s])
 
     def empty_solution(self):
-        # All students unassigned (-1), all teams empty
+        """Return a solution with every student unassigned and all teams empty."""
         return Solution(self, [-1] * self.n, [set() for _ in range(self.n_teams)])
 
     def construction_neighbourhood(self):
+        """Return the neighbourhood used to assign students one at a time."""
         return AddNeighbourhood(self)
 
 
 class Solution:
+    """An assignment of students to teams plus the per-team membership sets."""
 
     def __init__(self, problem, team, members):
+        """Store the problem, the per-student team array and the per-team member sets."""
         self.problem = problem
-        self.team = team  # team[s]    = team index of student s (-1 if unassigned)
-        self.members = members  # members[t] = set of students in team t
+        self.team = team
+        self.members = members
 
     def __str__(self):
+        """Human-readable dump of the team assignment and memberships."""
         members = "\n".join([f"\t\t{t}: {str(m)}" for t, m in enumerate(self.members)])
         return f"\tteam:    {self.team}\n\tmembers:\n{members}"
 
     def copy_solution(self):
+        """Return a deep-enough copy that can be mutated independently."""
         return Solution(self.problem, self.team[:], [m.copy() for m in self.members])
 
     def objective_value(self):
-        # Returns None if any student is still unassigned
+        """Total weighted label diversity, or None if any student is unassigned."""
         if -1 in self.team:
             return None
         p = self.problem
         total = 0
         for t in range(p.n_teams):
             for a in range(p.n_attrs):
-                # Count how many distinct labels appear in team t for attribute a
                 total += p.weights[a] * len({p.labels[s][a] for s in self.members[t]})
         return total
 
     def lower_bound(self):
-        # Trivial lower bound: every team has at least 1 distinct label per attribute
+        """Trivial lower bound: at least one distinct label per attribute per team."""
         return sum(self.problem.weights) * self.problem.n_teams
 
 
 class AddNeighbourhood:
+    """Construction neighbourhood that assigns the next student to a feasible team."""
 
     def __init__(self, problem):
+        """Store the problem this neighbourhood operates on."""
         self.problem = problem
 
     def moves(self, solution):
+        """Yield one AddMove per feasible team for the next unassigned student."""
         p = self.problem
 
-        # Pick the next unassigned student in conflict-priority order
         s = next((s for s in p.order if solution.team[s] == -1), None)
         if s is None:
-            return  # all students assigned, no moves possible
+            return
 
-        # Yield one move per feasible team for student s
         for t in range(p.n_teams):
-            # Skip full teams
             if len(solution.members[t]) >= p.team_max:
                 continue
-            # Skip teams where s has a disagreement with an existing member
             if any(
                 (min(s, o), max(s, o)) in p.disagreements for o in solution.members[t]
             ):
@@ -112,18 +105,19 @@ class AddNeighbourhood:
 
 
 class AddMove:
+    """A move that assigns one student to one team."""
 
     def __init__(self, s, t):
-        self.s = s  # student to assign
-        self.t = t  # team to assign them to
+        """Record the student s and target team t."""
+        self.s = s
+        self.t = t
 
     def __str__(self):
+        """Describe the assignment."""
         return f"assign student {self.s} to team {self.t}"
 
     def lower_bound_increment(self, solution):
-        # Cost = sum of weights for attributes where student s introduces
-        # a new label into team t. Objective minimizes total label weight,
-        # so pick moves with the lowest increment.
+        """Cost of the move: weights of attributes where s adds a new label to team t."""
         p = solution.problem
         return sum(
             p.weights[a]
@@ -134,14 +128,15 @@ class AddMove:
         )
 
     def apply_move(self, solution):
+        """Apply the assignment in place and return the mutated solution."""
         solution.team[self.s] = self.t
         solution.members[self.t].add(self.s)
         return solution
 
 
-# Greedy self
 def repair_min_size(s):
-    """Move students from over-min teams to under-min teams until all teams >= team_min."""
+    """Move students from over-min teams into under-min teams until every team
+    has at least team_min members, skipping moves that create a disagreement."""
     p = s.problem
     changed = True
     while changed:
@@ -170,11 +165,11 @@ def repair_min_size(s):
 
 
 def run_construction(instance_file, solution_file):
+    """Build a greedy solution (assign each student to the least-cost feasible
+    team), repair team sizes, write it to solution_file and return its objective."""
     p = Problem(instance_file)
     s = p.empty_solution()
 
-    # Greedy best-improvement construction:
-    # at each step assign next student to whichever team adds least cost
     constr = p.construction_neighbourhood()
     while True:
         best_move, best_incr = None, math.inf
@@ -198,19 +193,3 @@ def run_construction(instance_file, solution_file):
 
 if __name__ == "__main__":
     result = run_construction(sys.argv[1], sys.argv[2])
-
-
-# ROAR API
-
-# if __name__ == '__main__':
-#     instance_file, solution_file = sys.argv[1], sys.argv[2]
-
-#     p = Problem(instance_file)
-
-#     # Use the ROAR-NET greedy construction algorithm
-#     s = greedy_construction(p)
-
-#     print(f"Objective value: {s.objective_value()}")
-
-#     with open(solution_file, 'w') as f:
-#         f.write(' '.join(map(str, s.team)) + '\n')

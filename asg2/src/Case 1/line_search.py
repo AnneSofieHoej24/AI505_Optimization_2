@@ -1,14 +1,14 @@
 import numpy as np
 
 def strong_backtracking(f, nabla, x, d, alpha=1, beta=1e-4, sigma=0.1):
-    """Finds a step length alpha that satisfies the Strong Wolfe Conditions.
-    The algorithm consists of two phases, Bracketing and Zoom"""
+    """Find a step length satisfying the Strong Wolfe conditions via a
+    two-phase bracketing then zoom search. Returns the step plus the rejected
+    and tried step lengths for plotting."""
     y0, g0, y_prev, alpha_prev = f(x), nabla(x) @ d, None, 0
     alpha_lo, alpha_hi = None, None
-    rejected     = []   # Failed, shrink
+    rejected     = []
     tried_alpha = []
 
-    # Bracket phase
     while True:
         tried_alpha.append(alpha)
         y = f(x + alpha*d)
@@ -23,7 +23,6 @@ def strong_backtracking(f, nabla, x, d, alpha=1, beta=1e-4, sigma=0.1):
             break
         y_prev, alpha_prev, alpha = y, alpha, 2 * alpha
 
-    # Zoom phase
     ylo = f(x + alpha_lo*d)
     while abs(alpha_hi - alpha_lo) > 1e-10:
         alpha = (alpha_lo + alpha_hi)/2
@@ -42,8 +41,8 @@ def strong_backtracking(f, nabla, x, d, alpha=1, beta=1e-4, sigma=0.1):
 
 
 def backtracking_line_search(f, grad, x, d, alpha_0=0.5, p=0.5, beta=1e-4):
-    """ Finds a step length alpha using the Armijo sufficient decrease condition."""
-    y, g, alpha = f(x), grad(x), alpha_0    
+    """Find a step length using the Armijo sufficient-decrease condition."""
+    y, g, alpha = f(x), grad(x), alpha_0
     while ( f(x + alpha * d) > y + beta * alpha * np.dot(g, d) ) :
         alpha *= p
     return alpha
